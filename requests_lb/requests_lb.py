@@ -71,7 +71,7 @@ class RequestsLB:
 
         log.debug("SRV marking bad host %s", host_entry)
         self._srv_bad_hosts[host_entry] = self._time()
-        self._srv_hosts.remove(host_entry)
+        self._srv_hosts.discard(host_entry)
 
     def _srv_reintroduce_bad_hosts(self):
         """
@@ -85,7 +85,7 @@ class RequestsLB:
                 continue
 
             log.debug("SRV reintroducing host %s", host_entry)
-            self._srv_bad_hosts.remove(host_entry)
+            self._srv_bad_hosts.pop(host_entry)
             self._srv_hosts.add(host_entry)
 
     def _srv_is_expired(self):
