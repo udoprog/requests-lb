@@ -2,12 +2,19 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup
+
+import sys
 import requests_lb
 
 NAME = "requests-lb"
 VERSION = str(requests_lb.VERSION)
 
-with open('requirements.txt') as f:
+if sys.version_info[0] == 2:
+    req = "requirements2.txt"
+else:
+    req = "requirements.txt"
+
+with open(req) as f:
     required = f.read().splitlines()
 
 setup(

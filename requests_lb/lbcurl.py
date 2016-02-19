@@ -1,9 +1,18 @@
 from .requests_lb import RequestsLB
 
+import os
 import sys
 import logging
 import argparse
-import urllib.parse
+
+try:
+    from urllib.parse import urlparse
+    from urllib.parse import parse_qs
+    out_buffer = sys.stdout.buffer
+except ImportError:
+    from urlparse import urlparse
+    from urlparse import parse_qs
+    out_buffer = sys.stdout
 
 def header_tuple(string):
     parts = string.split(':', 1)
@@ -37,7 +46,7 @@ def entry():
     ns = parser.parse_args()
     config_logging(ns)
 
-    url = urllib.parse.urlparse(ns.target)
+    url = urlparse(ns.target)
     req = RequestsLB(url.netloc, protocol=url.scheme)
 
     kw = dict()
@@ -53,14 +62,16 @@ def entry():
         if ns.method is None:
             ns.method = 'GET'
 
-    kw['params'] = urllib.parse.parse_qs(url.query)
+    kw['params'] = parse_qs(url.query)
 
     response = req.request(ns.method, url.path, **kw)
 
     if ns.debug:
-        print("< {} {}".format(response.status_code, response.reason), file=sys.stderr)
+        sys.stderr.write(
+            "< {} {}".format(response.status_code, response.reason) +
+            os.linesep)
 
         for (key, value) in response.headers.items():
-            print("< {}: {}".format(key, value), file=sys.stderr)
+            sys.stderr.write("< {}: {}".format(key, value) + os.linesep)
 
-    sys.stdout.buffer.write(response.content)
+    out_buffer.write(response.content)
