@@ -46,7 +46,6 @@ class RequestsLB:
         self._srv = kw.get('srv_provider', srv_provider)(**kw)
         self._sample = kw.get('sample_provider', sample_provider)
         self._srv_update_timeout = kw.get('srv_timeout', 30)
-        self._timeout = kw.get('request_timeout', 30)
         self._bad_host_timeout = kw.get('bad_host_timeout', 2)
 
         self._srv_host = None
@@ -139,15 +138,10 @@ class RequestsLB:
         if target[0] == '/':
             target = target[1:]
 
-        start = self._time()
-
         while True:
             host_entry = self._srv_next_host()
             (host, port) = host_entry
             url = "{}://{}:{}/{}".format(self._protocol, host, port, target)
-
-            params = dict(kw)
-            params['timeout'] = (self._timeout - (self._time() - start))
 
             try:
                 response = fn(url, **kw)
