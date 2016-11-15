@@ -173,7 +173,6 @@ class RequestsLB:
         return _fn
 
     def request(self, method, target, **kw):
-        req = self._s.request
         fn = self._request_fn(method)
         return self._retry_request(fn, target, **kw)
 
