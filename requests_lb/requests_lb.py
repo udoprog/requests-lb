@@ -5,6 +5,7 @@ import requests
 import sys
 import time
 
+
 log = logging.getLogger(__name__)
 
 
@@ -46,8 +47,8 @@ class RequestsLB:
         self._srv = kw.get('srv_provider', srv_provider)(**kw)
         self._sample = kw.get('sample_provider', sample_provider)
         self._srv_update_timeout = kw.get('srv_timeout', 30)
-        self._timeout = kw.get('request_timeout', 30)
         self._bad_host_timeout = kw.get('bad_host_timeout', 2)
+        self._max_request_retries = kw.get('max_request_retries', 3)
 
         self._srv_host = None
         self._srv_bad_hosts = dict()
@@ -135,19 +136,15 @@ class RequestsLB:
         Send the given request, as defined by the `fn` argument to the given
         target.
         """
+        max_request_retries = self._max_request_retries
 
         if target[0] == '/':
             target = target[1:]
 
-        start = self._time()
-
-        while True:
+        while max_request_retries > 0:
             host_entry = self._srv_next_host()
             (host, port) = host_entry
             url = "{}://{}:{}/{}".format(self._protocol, host, port, target)
-
-            params = dict(kw)
-            params['timeout'] = (self._timeout - (self._time() - start))
 
             try:
                 response = fn(url, **kw)
@@ -155,14 +152,18 @@ class RequestsLB:
                 log.error("request failed: %s", host_entry,
                           exc_info=sys.exc_info())
                 self._srv_mark_bad_host(host_entry)
+                max_request_retries -= 1
                 continue
 
             if response.status_code == 503:
                 log.error("host responded with 503: %s", host_entry)
                 self._srv_mark_bad_host(host_entry)
+                max_request_retries -= 1
                 continue
 
             return response
+
+        raise Exception("Maximum number of retries attempted")
 
     def _request_fn(self, method):
         s = self._s
@@ -173,7 +174,6 @@ class RequestsLB:
         return _fn
 
     def request(self, method, target, **kw):
-        req = self._s.request
         fn = self._request_fn(method)
         return self._retry_request(fn, target, **kw)
 
